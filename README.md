@@ -1,4 +1,4 @@
-# ⚡ Power Grid Fault Analysis — Day 1 (EDA Pipeline)
+# ⚡ Power Grid Fault Analysis — (EDA Pipeline and Data Preprocessing)
 
 ## 📌 Overview
 This project focuses on **fault propagation and stability analysis in electrical power grids** using machine learning.
