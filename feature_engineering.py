@@ -436,10 +436,10 @@ print("             selected_features.csv")
 print(f"  Importance table → {OUTPUT_DIR}/feature_importance_table.csv")
 
 # =============================================================================
-# 9. DAY 2 SUMMARY
+# 9. SUMMARY
 # =============================================================================
 print("\n" + "=" * 60)
-print("DAY 2 COMPLETE — Feature Engineering Summary")
+print("Feature Engineering Summary")
 print("=" * 60)
 print(f"  Original features         : {len(feature_cols)}")
 print(f"  + Temporal features       : {len(temporal_added)}")
