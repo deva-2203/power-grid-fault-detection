@@ -3,7 +3,7 @@
 ## 📌 Overview
 This project focuses on **fault propagation and stability analysis in electrical power grids** using machine learning.
 
-**Day 1** builds a complete **data foundation pipeline**, including:
+Building a complete **data foundation pipeline**, including:
 - Data loading & inspection  
 - Exploratory Data Analysis (EDA)  
 - Data cleaning  
