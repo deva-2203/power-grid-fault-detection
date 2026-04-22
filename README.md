@@ -8,7 +8,7 @@ Building a complete **data foundation pipeline**, including:
 - Exploratory Data Analysis (EDA)  
 - Data cleaning  
 - Feature scaling  
-- Class imbalance handling (SMOTE vs class_weight)  
+- Class imbalance handling (SMOTE)  
 - Train/validation/test split  
 
 ---
@@ -69,37 +69,26 @@ Building a complete **data foundation pipeline**, including:
 ---
 
 ### 6. Class Imbalance Handling
-- Uses **SMOTE (Synthetic Minority Over-sampling Technique)**
-- Compares:
-  - SMOTE vs `class_weight="balanced"` (Logistic Regression baseline)
-- Evaluated using **PR-AUC**
+- Uses **SMOTE (Synthetic Minority Over-sampling Technique)** *(train split only)*
 
 ---
 
-### 7. Output Artifacts
+## ⚙️ Feature Engineering (Day 2)
+Feature engineering expands the raw grid measurements into an enriched feature set for downstream modeling.
 
-#### Saved Data Splits:
+### What’s added
+- **Temporal enrichment**
+  - Rolling mean/std/min/max for `tau*` and `p*` over windows **5 / 10 / 20**
+  - Rate-of-change (`diff`) features
+  - Lag features (t-1, t-2, t-3) for `g*` and `p*`
+- **Graph-derived features (4-node star topology)**
+  - Node metrics: degree, betweenness, clustering
+  - Edge load ratios + `avg_edge_load` using a simple capacity proxy
+- **Feature selection**
+  - Random Forest + permutation importance on validation split
+  - Keeps features contributing to **95% cumulative importance**
 
-- Raw:
-  - `X_train_raw.csv`, `X_val_raw.csv`, `X_test_raw.csv`
-- Standard Scaled:
-  - `X_train_std.csv`, `X_val_std.csv`, `X_test_std.csv`
-- MinMax Scaled:
-  - `X_train_mm.csv`, `X_val_mm.csv`, `X_test_mm.csv`
-- SMOTE:
-  - `X_train_smote.csv`
-- Labels:
-  - `y_train.csv`, `y_val.csv`, `y_test.csv`
-
----
-
-#### 📊 Saved Visualizations:
-
-- Class distribution  
-- Feature histograms  
-- Correlation heatmap  
-- Boxplots  
-- SMOTE comparison  
-
----
-
+### Run
+```bash
+python feature_engineering.py
+```

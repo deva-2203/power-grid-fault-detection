@@ -7,10 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.dummy import DummyClassifier
-from sklearn.metrics import f1_score, average_precision_score
 from imblearn.over_sampling import SMOTE
 import warnings
 
@@ -218,7 +216,7 @@ print(f"\n  Sample means after StandardScaler (should be ~0):")
 print(X_train_std.mean().round(4).to_string())
  
 # =============================================================================
-# 6. CLASS IMBALANCE — SMOTE vs class_weight comparison
+# 6. CLASS IMBALANCE — SMOTE balancing
 # =============================================================================
 print("\n" + "=" * 60)
 print("STEP 6 — Class imbalance handling")
@@ -230,22 +228,6 @@ X_train_smote, y_train_smote = smote.fit_resample(X_train_std, y_train)
  
 print(f"\n  Before SMOTE: {y_train.value_counts().to_dict()}")
 print(f"  After  SMOTE: {pd.Series(y_train_smote).value_counts().to_dict()}")
- 
-# Quick PR-AUC comparison: SMOTE vs class_weight on a dummy-comparable baseline
-
-from sklearn.linear_model import LogisticRegression
-lr_smote = LogisticRegression(max_iter=500, random_state=42)
-lr_smote.fit(X_train_smote, y_train_smote)
-smote_auc = average_precision_score(y_val, lr_smote.predict_proba(X_val_std)[:, 1])
- 
-lr_cw = LogisticRegression(max_iter=500, class_weight="balanced", random_state=42)
-lr_cw.fit(X_train_std, y_train)
-cw_auc = average_precision_score(y_val, lr_cw.predict_proba(X_val_std)[:, 1])
- 
-print(f"\n  Quick LR baseline — PR-AUC on validation set:")
-print(f"    SMOTE           : {smote_auc:.4f}")
-print(f"    class_weight    : {cw_auc:.4f}")
-print(f"  → {'SMOTE' if smote_auc >= cw_auc else 'class_weight'} performs better on this split (will re-evaluate in Day 3 with RF/XGBoost)")
  
 # Visualize SMOTE effect
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))
