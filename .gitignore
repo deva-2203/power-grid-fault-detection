@@ -1,0 +1,12 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Outputs (EDA images, splits, etc.)
+outputs/
+
+# System files
+.DS_Store
