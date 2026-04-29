@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -40,6 +41,18 @@ def _prepare_xy(df: pd.DataFrame, target_col: str) -> tuple[pd.DataFrame, pd.Ser
     return X, y
 
 
+def _normalize_binary_target(y: pd.Series) -> pd.Series:
+    if is_numeric_dtype(y):
+        return y.astype(int)
+
+    normalized = y.astype(str).str.strip().str.lower()
+    mapped = normalized.map({"stable": 0, "unstable": 1})
+    if mapped.isnull().any():
+        invalid = sorted(normalized[mapped.isnull()].unique().tolist())
+        raise ValueError(f"Unsupported target labels: {invalid}")
+    return mapped.astype(int)
+
+
 def _get_positive_scores(model, X_test: pd.DataFrame) -> Optional[pd.Series]:
     if hasattr(model, "predict_proba"):
         proba = model.predict_proba(X_test)
@@ -58,7 +71,7 @@ def evaluate_model(name: str, model, X_train: pd.DataFrame, X_test: pd.DataFrame
     y_pred = model.predict(X_test)
     y_score = _get_positive_scores(model, X_test)
 
-    report = classification_report(y_test, y_pred, digits=4)
+    report = classification_report(y_test, y_pred, digits=4, zero_division=0)
     confusion = pd.DataFrame(
         confusion_matrix(y_test, y_pred),
         index=["actual_0", "actual_1"],
@@ -79,6 +92,7 @@ def evaluate_model(name: str, model, X_train: pd.DataFrame, X_test: pd.DataFrame
 
 def run_baselines(df: pd.DataFrame, target_col: str = "stabf") -> Dict[str, ModelResult]:
     X, y = _prepare_xy(df, target_col)
+    y = _normalize_binary_target(y)
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -128,7 +142,5 @@ if __name__ == "__main__":
     # Replace this loader with your own pipeline output as needed.
     input_df = pd.read_csv("data/Data_for_UCI_named.csv")
     input_df = input_df.drop(columns=["stab"], errors="ignore")
-    if input_df["stabf"].dtype == object:
-        input_df["stabf"] = (input_df["stabf"] == "unstable").astype(int)
 
     run_baselines(input_df, target_col="stabf")
