@@ -5,3 +5,4 @@ seaborn==0.13.2
 scikit-learn==1.4.2
 imbalanced-learn==0.12.3
 networkx>=3.0
+xgboost>=2.0

@@ -7,6 +7,7 @@ The repository currently includes:
 1. EDA and preprocessing pipeline
 2. Feature engineering pipeline
 3. Baseline model training and evaluation
+4. Learning algorithm stack for classification, anomaly detection, and segmentation
 
 ## Dataset
 - Name: Electrical Grid Stability Simulated Data
@@ -19,6 +20,8 @@ The repository currently includes:
 - `eda.py`: data loading, EDA, cleaning, scaling, train/val/test split, SMOTE, and artifact export
 - `feature_engineering.py`: temporal + graph feature generation, feature selection, and engineered split export
 - `baseline_models.py`: baseline classification models and metric reporting
+- `learning_algorithms.py`: PCA, RF, XGBoost, RF+XGBoost ensemble, Isolation Forest,
+  K-Means, Stage 5 input export, and cross-validation reports
 - `requirements.txt`: Python dependencies
 
 ## Setup
@@ -35,6 +38,7 @@ Run scripts in this order:
 python eda.py
 python feature_engineering.py
 python baseline_models.py
+python learning_algorithms.py
 ```
 
 ## Pipeline Details
@@ -87,9 +91,49 @@ Baseline-only setup (no tuning, no CV, no extra resampling):
   - ROC-AUC
   - PR-AUC (average precision)
 
+### 4. Learning Algorithms (`learning_algorithms.py`)
+Consumes the selected engineered splits from `outputs/day2/splits/`.
+
+- PCA:
+  - Fits on SMOTE training data only
+  - Retains components explaining 95% of variance
+  - Feeds transformed splits to Isolation Forest and K-Means
+- Random Forest:
+  - `GridSearchCV` over `n_estimators`, `max_depth`, `min_samples_split`,
+    and `class_weight="balanced"`
+  - Outputs binary probabilities for all original train/val/test samples
+- XGBoost:
+  - Tunes `scale_pos_weight` against validation PR-AUC
+  - Outputs binary probabilities for all original train/val/test samples
+- Ensemble:
+  - Soft-votes RF and XGBoost probabilities
+  - Weights each model by validation PR-AUC
+  - Tunes decision threshold on the PR curve with recall favored
+- Isolation Forest:
+  - Fits on PCA-transformed SMOTE training data
+  - Tunes contamination from 0.05 to 0.20 against validation F1
+  - Outputs anomaly scores
+- K-Means:
+  - Uses PCA-transformed train/val/test data
+  - Reports elbow and silhouette results
+  - Exports named clusters assigned by observed fault rate:
+    `normal operation`, `pre-fault stress`, `active fault`
+- Evaluation:
+  - Reports mean ± std across 5-fold Stratified K-Fold and TimeSeriesSplit
+  - Includes PR-AUC, class-wise F1, MCC, ROC-AUC, confusion matrices, and
+    calibration curve data
+
 ## Outputs
 - `outputs/day1/`: EDA plots and preprocessing splits
 - `outputs/day2/`: feature engineering plots, selected-feature splits, and importance table
+- `outputs/learning_algorithms/stage5_graph_propagation_input.csv`: direct Stage 5 input with
+  `[sample_id, RF_prob, XGBoost_prob, ensemble_prob, ensemble_label,
+  IF_anomaly_score, kmeans_cluster]`
+- `outputs/learning_algorithms/cv_metrics_mean_std.csv`: mean ± std evaluation metrics
+- `outputs/learning_algorithms/cv_fold_metrics.csv`: per-fold evaluation metrics
+- `outputs/learning_algorithms/artifacts/`: tuning tables, PCA summary, calibration curve data,
+  and metadata
+- `outputs/learning_algorithms/plots/`: K-Means diagnostics and confusion matrices
 
 ## Notes
 - Scripts are deterministic where configured via `random_state=42`.
