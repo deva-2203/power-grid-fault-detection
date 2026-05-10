@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+import joblib
+
 os.environ.setdefault("MPLBACKEND", "Agg")
 os.environ.setdefault("PYTHONWARNINGS", "ignore")
 
@@ -50,6 +52,7 @@ SPLITS_DIR = Path("outputs/day2/splits")
 OUTPUT_DIR = Path("outputs/learning_algorithms")
 PLOTS_DIR = OUTPUT_DIR / "plots"
 ARTIFACTS_DIR = OUTPUT_DIR / "artifacts"
+MODELS_DIR = OUTPUT_DIR / "models"
 
 
 @dataclass(frozen=True)
@@ -511,6 +514,7 @@ def main() -> None:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(PLOTS_DIR, exist_ok=True)
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+    os.makedirs(MODELS_DIR, exist_ok=True)
 
     print("=" * 72)
     print("LEARNING ALGORITHMS - Classification, Anomaly Detection, Segmentation")
@@ -572,6 +576,21 @@ def main() -> None:
         cluster_names=cluster_names,
     )
     print(f"Saved Stage 5 input with {len(results)} rows.")
+
+    # ── Save fitted models for inference ──────────────────────────────────────
+    print("\nSaving fitted models to", MODELS_DIR)
+    joblib.dump(rf_model,     MODELS_DIR / "rf_classifier.joblib")
+    joblib.dump(xgb_model,    MODELS_DIR / "xgboost_classifier.joblib")
+    joblib.dump(pca,          MODELS_DIR / "pca.joblib")
+    joblib.dump(if_model,     MODELS_DIR / "isolation_forest.joblib")
+    joblib.dump(kmeans_model, MODELS_DIR / "kmeans.joblib")
+    # Save ensemble metadata separately for inference
+    joblib.dump(
+        {"weights": ensemble_weights, "threshold": ensemble_threshold, "cluster_names": cluster_names},
+        MODELS_DIR / "ensemble_meta.joblib",
+    )
+    print("  rf_classifier.joblib, xgboost_classifier.joblib, pca.joblib")
+    print("  isolation_forest.joblib, kmeans.joblib, ensemble_meta.joblib")
 
     X_cv = pd.concat([data.X_train, data.X_val, data.X_test], ignore_index=True)
     y_cv = y_all

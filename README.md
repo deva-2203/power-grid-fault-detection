@@ -1,13 +1,79 @@
-# Power Grid Fault Analysis
+# ⚡ Power Grid Fault Detection
 
-This project performs fault propagation and stability analysis for electrical grids using a reproducible machine learning pipeline.
+> A machine learning system that monitors a simulated 4-node power grid in real-time and predicts grid instability before it happens, displayed through a modern web dashboard.
+
+![Dashboard](https://img.shields.io/badge/Dashboard-React-blue) ![Backend](https://img.shields.io/badge/Backend-FastAPI-green) ![ML](https://img.shields.io/badge/ML-XGBoost%20%2B%20Random%20Forest-orange)
+
+---
+
+## What It Does
+
+This system predicts whether a power grid will become **unstable (fault)** or remain **stable** in real-time, by analyzing sensor data from a 4-node electrical grid network. It takes raw measurements from each node — reaction time, power output/demand, and grid cooperation — and uses trained machine learning models to calculate the probability of a fault occurring.
+
+## Who It's For
+
+- **Grid operators** monitoring a power network in a control room
+- **Researchers** studying decentralized smart grid stability
+- **Engineers** who want to detect faults *before* they cascade into blackouts
+
+## How It Works
+
+```
+Raw IEEE Dataset → EDA → Feature Engineering → Model Training → Trained Models
+                                                                      ↓
+                                              Browser ← React ← FastAPI ← Inference Engine
+```
+
+1. **Data** — Uses the IEEE Electrical Grid Stability dataset: 10,000 simulated readings from a 4-node star network (1 generator + 3 consumers), each with 12 features
+2. **Training** (`learning_algorithms.py`) — Trains an ensemble of ML models (XGBoost, Random Forest, Isolation Forest, PCA + K-Means) combined into a meta-classifier with calibrated fault probability
+3. **Inference** (`inference.py`) — Loads trained models, engineers features (graph metrics, interaction terms), scales data, and runs predictions: raw reading → fault probability (0–100%) + risk tier
+4. **API** (`api.py`) — FastAPI backend that serves predictions over HTTP
+5. **Dashboard** (`frontend/`) — React web app with live-scrolling sensor charts, z-score zones, and per-node warnings
+
+## The 4-Node Grid Topology
+
+```
+        Node 1 (Consumer)
+            |
+            |
+Node 2 ---- Node 0 ---- Node 3
+(Consumer)  (Generator)  (Consumer)
+```
+
+| Node | Role | Sensors | Description |
+|------|------|---------|-------------|
+| Node 0 | Generator | `tau1`, `p1`, `g1` | Central power producer, `p1` is always positive |
+| Node 1 | Consumer 1 | `tau2`, `p2`, `g2` | Draws power, `p2` is always negative |
+| Node 2 | Consumer 2 | `tau3`, `p3`, `g3` | Draws power, `p3` is always negative |
+| Node 3 | Consumer 3 | `tau4`, `p4`, `g4` | Draws power, `p4` is always negative |
+
+Each node has 3 monitored features:
+
+| Feature | Meaning |
+|---------|---------|
+| `tau` (τ) | Reaction time — how quickly the node adjusts its price signal |
+| `p` | Power — positive = producing energy, negative = consuming energy |
+| `g` (γ) | Cooperation coefficient — how willing the node is to cooperate for grid stability (0 to 1) |
+
+## Tech Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| **Machine Learning** | Python, XGBoost, scikit-learn (Random Forest, Isolation Forest, PCA, K-Means), NumPy, Pandas |
+| **Backend** | FastAPI, Uvicorn |
+| **Frontend** | React, Vite, Tailwind CSS, Recharts, Framer Motion |
+
+---
 
 ## Overview
-The repository currently includes:
+
+The repository includes:
 1. EDA and preprocessing pipeline
 2. Feature engineering pipeline
 3. Baseline model training and evaluation
 4. Learning algorithm stack for classification, anomaly detection, and segmentation
+5. Real-time inference engine and FastAPI backend
+6. Interactive React web dashboard for live grid monitoring
 
 ## Dataset
 - Name: Electrical Grid Stability Simulated Data
@@ -22,6 +88,9 @@ The repository currently includes:
 - `baseline_models.py`: baseline classification models and metric reporting
 - `learning_algorithms.py`: PCA, RF, XGBoost, RF+XGBoost ensemble, Isolation Forest,
   K-Means, Stage 5 input export, and cross-validation reports
+- `inference.py`: model loading and single/sequence prediction engine
+- `api.py`: FastAPI backend serving trained model predictions via REST API
+- `frontend/`: React web dashboard (Vite + Tailwind CSS + Recharts)
 - `requirements.txt`: Python dependencies
 
 ## Setup
@@ -40,6 +109,24 @@ python feature_engineering.py
 python baseline_models.py
 python learning_algorithms.py
 ```
+
+### Running the Live Dashboard
+
+After training is complete, start the dashboard:
+
+**Terminal 1 — Backend:**
+```bash
+uvicorn api:app --port 8000 --host 0.0.0.0
+```
+
+**Terminal 2 — Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev -- --port 3000 --host
+```
+
+Open **http://localhost:3000** and click **Start** to begin the live simulation.
 
 ## Pipeline Details
 

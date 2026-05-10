@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
 import warnings
+import joblib
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import permutation_importance
@@ -429,6 +430,11 @@ pd.Series(selected_features, name="feature").to_csv(
 # Save the full importance table
 imp_df.to_csv(f"{OUTPUT_DIR}/feature_importance_table.csv", index=False)
 
+# Save fitted scalers for inference
+joblib.dump(std_sel, f"{OUTPUT_DIR}/standard_scaler.joblib")
+joblib.dump(mm_sel,  f"{OUTPUT_DIR}/minmax_scaler.joblib")
+print(f"  Scalers saved to : {OUTPUT_DIR}/standard_scaler.joblib, minmax_scaler.joblib")
+
 print(f"  Saved to : {splits_dir}/")
 print("  Files    : X_train/val/test_eng_raw, _std, _mm, _smote")
 print("             y_train, y_val, y_test, y_train_smote")
@@ -450,3 +456,4 @@ print(f"  Dropped (redundant)       : {len(dropped_features)}")
 print(f"  SMOTE train size          : {len(X_train_smote)}")
 print(f"  Plots saved to            : {OUTPUT_DIR}/")
 print(f"  Splits saved to           : {splits_dir}/")
+print(f"  Scalers saved to          : {OUTPUT_DIR}/")
