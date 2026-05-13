@@ -297,6 +297,42 @@ def predict_sequence(rows: list[dict]) -> list[dict]:
     return results
 
 
+def predict_batch(rows: list[dict]) -> list[dict]:
+    """
+    Predict for a batch of **independent** readings — each row is engineered
+    in isolation (no temporal context from neighboring rows).
+
+    Use this for uploaded datasets where rows are independent samples,
+    NOT a time series.  Skips counterfactuals for speed.
+
+    Returns one result dict per row.
+    """
+    # Engineer each row independently (single-row temporal approximation)
+    eng_frames = []
+    for row in rows:
+        df_single = pd.DataFrame([row])
+        eng_frames.append(_engineer_dataframe(df_single))
+
+    # Stack all engineered rows and run inference as one batch
+    df_all = pd.concat(eng_frames, ignore_index=True)
+    results = _run_inference(df_all)
+
+    # Enrich with raw-feature z-scores, risk tiers, and alert reasons
+    raw_stats = _load_raw_stable_stats()
+    for i, (r, row) in enumerate(zip(results, rows)):
+        r["risk_tier"] = _tier(r["ensemble_prob"])
+
+        raw_z = {
+            feat: (row[feat] - raw_stats["mean"][feat]) / raw_stats["std"][feat]
+            for feat in RAW_FEATURE_COLS if feat in row
+        }
+        r["z_scores"] = raw_z
+        r["alert_reason"] = _top_deviations(raw_z, n=3)
+        r["counterfactuals"] = None
+
+    return results
+
+
 def stable_defaults() -> dict:
     """Return the median of stable training samples as default input values."""
     stats = _load_raw_stable_stats()

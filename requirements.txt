@@ -6,4 +6,5 @@ joblib
 networkx
 fastapi
 uvicorn
+python-multipart
 plotly

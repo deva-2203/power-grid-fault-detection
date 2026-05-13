@@ -210,6 +210,152 @@ Consumes the selected engineered splits from `outputs/day2/splits/`.
   - Includes PR-AUC, class-wise F1, MCC, ROC-AUC, confusion matrices, and
     calibration curve data
 
+### 5. Inference Engine (`inference.py`)
+
+Loads all trained models and scalers once (cached via `lru_cache`) and provides a full prediction pipeline from raw 12-feature input to actionable risk output.
+
+#### Public Functions
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `predict_single` | `(raw: dict) → dict` | Predict fault risk for a single reading. Temporal features approximated (no prior context). |
+| `predict_sequence` | `(rows: list[dict]) → list[dict]` | Predict for a sequence of readings. The last row benefits from full rolling/lag temporal context. |
+| `stable_defaults` | `() → dict` | Returns the median of stable training samples as default input values. |
+| `feature_ranges` | `() → dict[str, dict]` | Returns per-feature `{min, max, p25, p75, mean}` from stable training samples. |
+
+**Input keys:** `tau1, tau2, tau3, tau4, p1, p2, p3, p4, g1, g2, g3, g4`
+
+#### Output Fields (per prediction)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `RF_prob` | float | Random Forest fault probability (0–1) |
+| `XGBoost_prob` | float | XGBoost fault probability (0–1) |
+| `ensemble_prob` | float | Weighted ensemble probability |
+| `ensemble_label` | int | Binary prediction (1 = fault) using tuned threshold |
+| `IF_anomaly_score` | float | Isolation Forest anomaly score (higher = more anomalous) |
+| `kmeans_cluster` | str | Cluster label: `normal operation`, `pre-fault stress`, or `active fault` |
+| `threshold` | float | Calibrated decision threshold used for `ensemble_label` |
+| `z_scores` | dict | Per-feature z-score vs stable training distribution |
+| `risk_tier` | str | `Green` (< 0.4), `Amber` (0.4–0.7), or `Red` (> 0.7) |
+| `counterfactuals` | list | Per-feature "what if" analysis (single-prediction only) |
+| `alert_reason` | list | Top-3 features with the largest z-score deviations |
+
+#### Risk Tier System
+
+```
+Ensemble Probability    Tier     Meaning
+─────────────────────   ─────    ──────────────────────────────
+< 0.4                   Green    Grid operating normally
+0.4 – 0.7              Amber    Elevated risk — monitor closely
+> 0.7                   Red      High fault probability — act now
+```
+
+#### Counterfactual Analysis
+
+For each of the 12 raw features, the engine replaces it with the stable-region mean and re-runs inference. Returns the delta in ensemble probability — showing an operator exactly *which feature to fix* and *how much it would help*:
+
+```json
+{
+  "feature": "p2",
+  "current_value": -3.8,
+  "stable_value": -1.2,
+  "new_prob": 0.42,
+  "delta": -0.31
+}
+```
+
+#### Scenario Simulation
+
+`run_scenario()` simulates multi-step grid events with optional operator intervention:
+
+```python
+run_scenario(
+    base_row,                    # Initial stable state (12 features)
+    events=[                     # Perturbation events
+        {"feature": "p2", "start_step": 5, "end_step": 20,
+         "start_val": None, "end_val": "3x"}
+    ],
+    n_steps=40,                  # Total timesteps
+    fix_at_step=25,              # When operator intervenes (optional)
+    fix_events=[...]             # Corrective events (optional)
+)
+```
+
+#### Preset Scenarios
+
+| Scenario | Description |
+|----------|-------------|
+| Consumer Spike — Node 1 | Node 1 demand ramps 3× over 15 steps (industrial load surge) |
+| Consumer Spike — Node 2 | Node 2 demand triples (unexpected large load connection) |
+| Generator Sag | Generator output drops to 20% (partial failure / fuel depletion) |
+| Response Slowdown — Node 1 | Node 1 reaction time degrades to near-max (controller lag) |
+| Cascading Overload | Node 1 spikes first, Node 2 follows 10 steps later (cascading failure) |
+
+---
+
+### 6. FastAPI Backend (`api.py`)
+
+REST API that serves trained model predictions to the frontend. Uses CORS middleware for cross-origin access.
+
+#### Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/stats` | Returns stable-region statistics (`mean`, `std`, `p25`, `p75`, `min`, `max` per feature) for computing z-scores in the frontend |
+| `GET` | `/api/scenarios` | Returns the preset scenario registry (names, descriptions, event definitions) |
+| `GET` | `/api/feed/dataset` | Runs batch inference on the test split, sorts by fault probability (stable → fault), and caches results to `outputs/precomputed_feed.pkl` for fast replay |
+| `GET` | `/api/feed/scenario/{name}` | Runs a preset scenario (40 steps) using the most clearly-stable test row as the starting point and returns the full simulation feed |
+
+#### Example Usage
+
+```bash
+# Get stable statistics
+curl http://localhost:8000/api/stats
+
+# List available scenarios
+curl http://localhost:8000/api/scenarios
+
+# Get the full dataset replay feed (cached after first call)
+curl http://localhost:8000/api/feed/dataset
+
+# Run a specific scenario
+curl http://localhost:8000/api/feed/scenario/Generator%20Sag
+```
+
+---
+
+### 7. Frontend Dashboard (`frontend/`)
+
+React SPA (Vite + Tailwind CSS v4) that visualizes live grid predictions from the API.
+
+#### Architecture
+
+| File | Role |
+|------|------|
+| `App.jsx` | Main app — fetches data, manages playback state, renders the 4-node grid layout |
+| `components/NodeTile.jsx` | Per-node tile with 3 mini-charts, status badge, and animated warning bar |
+
+#### Key Features
+
+- **4-Node Grid View** — One tile per grid node (Generator + 3 Consumers), each showing 3 live-scrolling sensor charts:
+  - Reaction Time (τ)
+  - Power Output / Demand (p)
+  - Grid Cooperation (γ)
+- **Z-Score Visualization** — All sensor values are displayed as z-scores relative to stable training distribution. Chart zones:
+  - **Green band** (±1.5σ): Normal operation
+  - **Amber band** (±1.5σ to ±2.5σ): Elevated deviation
+  - **Red band** (beyond ±2.5σ): Critical deviation
+- **Per-Node Status Badge** — Automatically computed from worst sensor z-score:
+  - `Normal` (< 1.5σ) — green
+  - `Elevated` (1.5–2.5σ) — amber
+  - `Critical` (> 2.5σ) — red
+- **Animated Warning Bars** — 10-second sticky warnings with Framer Motion slide-in when any sensor breaches threshold, showing the worst metric and deviation direction
+- **Playback Controls** — Start/Stop/Reset with step counter (1 reading/second, 60-step rolling window)
+- **Dependencies** — React 19, Recharts, Framer Motion, Lucide React icons, Tailwind CSS v4
+
+---
+
 ## Outputs
 - `outputs/day1/`: EDA plots and preprocessing splits
 - `outputs/day2/`: feature engineering plots, selected-feature splits, and importance table

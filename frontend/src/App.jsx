@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Activity, Play, Square } from 'lucide-react'
+import { Activity, Play, Square, MonitorDot, FileUp } from 'lucide-react'
 import NodeTile from './components/NodeTile'
+import DatasetPredict from './components/DatasetPredict'
 
 const API_URL = 'http://localhost:8000/api'
 const SPEED_MS = 1000
@@ -15,7 +16,12 @@ const NODES = [
 
 const RAW_FEATS = ["tau1","tau2","tau3","tau4","p1","p2","p3","p4","g1","g2","g3","g4"]
 
-export default function App() {
+const TABS = [
+  { id: 'monitor', label: 'Live Monitor', icon: MonitorDot },
+  { id: 'predict', label: 'Dataset Predict', icon: FileUp },
+]
+
+function LiveMonitor() {
   const [feed, setFeed] = useState([])
   const [stats, setStats] = useState(null)
   const [step, setStep] = useState(0)
@@ -33,7 +39,6 @@ export default function App() {
         const fd = await feedRes.json()
         setStats(st)
         setFeed(fd)
-        setLoading(false)
       } catch (err) {
         console.error("Failed to load data:", err)
       }
@@ -81,16 +86,54 @@ export default function App() {
   }, [running, step, feed, stats])
 
   if (!feed.length) {
-    return <div className="flex h-screen items-center justify-center text-slate-400">Loading Grid Data...</div>
+    return <div className="flex h-64 items-center justify-center text-slate-400">Loading Grid Data...</div>
   }
 
-  const current = feed[step] || {}
+  return (
+    <>
+      {/* Controls */}
+      <div className="flex items-center justify-end gap-3 mb-6">
+        <div className="flex items-center gap-3 bg-slate-800/50 p-2 border border-slate-700/50 rounded-xl backdrop-blur-md">
+          <div className="text-xs text-slate-400 font-mono px-2">
+            RDG {step} / {feed.length}
+          </div>
+          <button
+            onClick={() => { setStep(0); setRunning(false); }}
+            className="px-3 py-2 rounded-lg font-semibold text-xs text-slate-400 border border-slate-600 hover:bg-slate-700 transition-all"
+          >
+            ↺ Reset
+          </button>
+          <button
+            onClick={() => setRunning(!running)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all w-28 justify-center ${
+              running
+                ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
+                : 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:bg-blue-400'
+            }`}
+          >
+            {running ? <><Square size={16} /> Stop</> : <><Play size={16} /> Start</>}
+          </button>
+        </div>
+      </div>
+
+      <h2 className="text-lg font-semibold text-slate-200 mb-4">Node Health — Live Sensor Feed</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {NODES.map(node => (
+          <NodeTile key={node.id} node={node} history={history} />
+        ))}
+      </div>
+    </>
+  )
+}
+
+export default function App() {
+  const [tab, setTab] = useState('monitor')
 
   return (
-    <div className="min-h-screen p-6 max-w-7xl mx-auto space-y-6 pb-20">
-      
+    <div className="min-h-screen p-6 max-w-7xl mx-auto pb-20">
+
       {/* Header */}
-      <header className="flex justify-between items-center mb-8">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3 tracking-tight">
             <Activity className="text-blue-500" />
@@ -100,36 +143,33 @@ export default function App() {
             Real-time multi-agent power grid stability prediction
           </p>
         </div>
-        
-        <div className="flex items-center gap-3 bg-slate-800/50 p-2 border border-slate-700/50 rounded-xl backdrop-blur-md">
-            <div className="text-xs text-slate-400 font-mono px-2">
-              RDG {step} / {feed.length}
-            </div>
-            <button 
-              onClick={() => { setStep(0); setRunning(false); }}
-              className="px-3 py-2 rounded-lg font-semibold text-xs text-slate-400 border border-slate-600 hover:bg-slate-700 transition-all"
-            >
-              ↺ Reset
-            </button>
-            <button 
-              onClick={() => setRunning(!running)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all w-28 justify-center ${
-                running 
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30' 
-                  : 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:bg-blue-400'
-              }`}
-            >
-              {running ? <><Square size={16} /> Stop</> : <><Play size={16} /> Start</>}
-            </button>
-          </div>
+
+        {/* Tab Navigation */}
+        <div className="flex bg-slate-800/60 border border-slate-700/50 rounded-xl p-1 backdrop-blur-md">
+          {TABS.map(t => {
+            const Icon = t.icon
+            const active = tab === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  active
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.15)]'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/40 border border-transparent'
+                }`}
+              >
+                <Icon size={16} />
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
       </header>
 
-      <h2 className="text-lg font-semibold text-slate-200 mt-8 mb-4">Node Health — Live Sensor Feed</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {NODES.map(node => (
-          <NodeTile key={node.id} node={node} history={history} />
-        ))}
-      </div>
+      {/* Tab Content */}
+      {tab === 'monitor' && <LiveMonitor />}
+      {tab === 'predict' && <DatasetPredict />}
 
     </div>
   )
