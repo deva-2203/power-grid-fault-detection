@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { Activity, Play, Square, MonitorDot, FileUp } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Activity, Play, Square, MonitorDot, FileUp, BarChart3 } from 'lucide-react'
 import NodeTile from './components/NodeTile'
 import DatasetPredict from './components/DatasetPredict'
+import AnalyticsPage from './components/AnalyticsPage'
 
 const API_URL = 'http://localhost:8000/api'
 const SPEED_MS = 1000
@@ -19,6 +20,7 @@ const RAW_FEATS = ["tau1","tau2","tau3","tau4","p1","p2","p3","p4","g1","g2","g3
 const TABS = [
   { id: 'monitor', label: 'Live Monitor', icon: MonitorDot },
   { id: 'predict', label: 'Dataset Predict', icon: FileUp },
+  { id: 'analytics', label: 'Graphs', icon: BarChart3 },
 ]
 
 function LiveMonitor() {
@@ -77,10 +79,14 @@ function LiveMonitor() {
     let interval;
     if (running && step < feed.length - 1 && stats) {
       interval = setInterval(() => {
-        setStep(s => s + 1)
+        setStep(s => {
+          const next = s + 1
+          if (next >= feed.length - 1) {
+            setTimeout(() => setRunning(false), 0)
+          }
+          return next
+        })
       }, SPEED_MS)
-    } else if (step >= feed.length - 1) {
-      setRunning(false)
     }
     return () => clearInterval(interval)
   }, [running, step, feed, stats])
@@ -170,6 +176,7 @@ export default function App() {
       {/* Tab Content */}
       {tab === 'monitor' && <LiveMonitor />}
       {tab === 'predict' && <DatasetPredict />}
+      {tab === 'analytics' && <AnalyticsPage />}
 
     </div>
   )

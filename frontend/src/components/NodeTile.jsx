@@ -62,12 +62,6 @@ function MiniChart({ data, dataKey, color, label }) {
   )
 }
 
-const METRIC_LABELS = {
-  tau: 'Reaction Time',
-  p:   null, // set per node
-  g:   'Grid Cooperation',
-}
-
 export default function NodeTile({ node, history }) {
   const [warning, setWarning] = useState(null)
   const dismissTimer = useRef(null)
@@ -116,12 +110,14 @@ export default function NodeTile({ node, history }) {
 
     if (worst) {
       const direction = worst.z > 0 ? 'too high' : 'too low'
-      setWarning({
-        tier:    worst.tier,
-        color:   worst.color,
-        bg:      worst.bg,
-        message: `${worst.label} is ${direction} (${worst.z.toFixed(2)}σ)`,
-      })
+      setTimeout(() => {
+        setWarning({
+          tier:    worst.tier,
+          color:   worst.color,
+          bg:      worst.bg,
+          message: `${worst.label} is ${direction} (${worst.z.toFixed(2)}σ)`,
+        })
+      }, 0)
 
       // Clear existing timer, restart 10s countdown
       if (dismissTimer.current) clearTimeout(dismissTimer.current)

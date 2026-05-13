@@ -309,7 +309,7 @@ export default function DatasetPredict() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map((r, idx) => (
+                  {sorted.map((r) => (
                     <tr key={r.row_index} className="group">
                       {/* Main Row */}
                       <td className="px-3 py-2 text-xs text-slate-500 font-mono border-b border-slate-700/30">
