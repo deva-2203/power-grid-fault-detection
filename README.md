@@ -90,18 +90,36 @@ The repository includes:
   K-Means, Stage 5 input export, and cross-validation reports
 - `inference.py`: model loading and single/sequence prediction engine
 - `api.py`: FastAPI backend serving trained model predictions via REST API
+- `run.sh`: one-command launcher for the backend and frontend
 - `frontend/`: React web dashboard (Vite + Tailwind CSS + Recharts)
 - `requirements.txt`: Python dependencies
 
-## Setup
-Install dependencies:
+## Quick Start
+From the project root, run:
 
 ```bash
-python -m pip install -r requirements.txt
+./run.sh
 ```
 
-## Run Order
-Run scripts in this order:
+This starts both services:
+
+```text
+Backend  → http://127.0.0.1:8000
+Frontend → http://127.0.0.1:3000
+```
+
+Open **http://127.0.0.1:3000** and click **Start** to begin the live simulation.
+
+The launcher will create `.venv`, install Python/frontend dependencies, and rebuild ML artifacts if they are missing.
+
+To use different ports:
+
+```bash
+BACKEND_PORT=8001 FRONTEND_PORT=3001 ./run.sh
+```
+
+## Manual Pipeline
+If you want to manually rebuild the ML pipeline, run scripts in this order:
 
 ```bash
 python eda.py
@@ -110,7 +128,7 @@ python baseline_models.py
 python learning_algorithms.py
 ```
 
-### Running the Live Dashboard
+### Manual Dashboard Startup
 
 After training is complete, start the dashboard:
 

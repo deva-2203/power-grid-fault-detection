@@ -3,8 +3,8 @@ import { Activity, Play, Square, MonitorDot, FileUp, BarChart3 } from 'lucide-re
 import NodeTile from './components/NodeTile'
 import DatasetPredict from './components/DatasetPredict'
 import AnalyticsPage from './components/AnalyticsPage'
+import { API_URL } from './config'
 
-const API_URL = 'http://localhost:8000/api'
 const SPEED_MS = 1000
 const MAX_HIST = 60
 

@@ -1,8 +1,8 @@
 import { useState, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, FileSpreadsheet, Download, AlertTriangle, ShieldCheck, Flame, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react'
+import { API_URL } from '../config'
 
-const API_URL = 'http://localhost:8000/api'
 const RAW_FEATS = ["tau1","tau2","tau3","tau4","p1","p2","p3","p4","g1","g2","g3","g4"]
 
 const TIER_STYLES = {
