@@ -12,6 +12,7 @@ outputs/
 
 # Node modules (rebuild with: cd frontend && npm install)
 frontend/node_modules/
+frontend/.vite/
 
 # Streamlit config (legacy)
 .streamlit/
