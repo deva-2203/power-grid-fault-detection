@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, FileSpreadsheet, Download, AlertTriangle, ShieldCheck, Flame, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react'
+import ClusterBadge from './ClusterBadge'
 import { API_URL } from '../config'
 
 const RAW_FEATS = ["tau1","tau2","tau3","tau4","p1","p2","p3","p4","g1","g2","g3","g4"]
@@ -328,7 +329,9 @@ export default function DatasetPredict() {
                           {r.ensemble_label === 1 ? 'Fault' : 'Stable'}
                         </span>
                       </td>
-                      <td className="px-3 py-2 border-b border-slate-700/30 text-xs text-slate-300">{r.kmeans_cluster}</td>
+                      <td className="px-3 py-2 border-b border-slate-700/30">
+                        <ClusterBadge cluster={r.kmeans_cluster} />
+                      </td>
                       <td className="px-3 py-2 border-b border-slate-700/30 text-xs text-slate-400 font-mono">{(r.RF_prob * 100).toFixed(1)}%</td>
                       <td className="px-3 py-2 border-b border-slate-700/30 text-xs text-slate-400 font-mono">{(r.XGBoost_prob * 100).toFixed(1)}%</td>
                       <td className="px-3 py-2 border-b border-slate-700/30 text-xs text-slate-400 font-mono">{r.IF_anomaly_score?.toFixed(3)}</td>

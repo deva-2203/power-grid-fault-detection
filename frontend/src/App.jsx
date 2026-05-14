@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Activity, Play, Square, MonitorDot, FileUp, BarChart3 } from 'lucide-react'
+import { Activity, Play, Square, MonitorDot, FileUp, BarChart3, GitBranch, ShieldAlert } from 'lucide-react'
 import NodeTile from './components/NodeTile'
 import DatasetPredict from './components/DatasetPredict'
 import AnalyticsPage from './components/AnalyticsPage'
+import ClusterBadge from './components/ClusterBadge'
 import { API_URL } from './config'
 
 const SPEED_MS = 1000
@@ -95,6 +96,9 @@ function LiveMonitor() {
     return <div className="flex h-64 items-center justify-center text-slate-400">Loading Grid Data...</div>
   }
 
+  const current = feed[step] || {}
+  const currentProb = Math.round((current.ensemble_prob || 0) * 100)
+
   return (
     <>
       {/* Controls */}
@@ -119,6 +123,31 @@ function LiveMonitor() {
           >
             {running ? <><Square size={16} /> Stop</> : <><Play size={16} /> Start</>}
           </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        <div className="bg-slate-800/35 border border-slate-700/50 rounded-xl p-4">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+            <GitBranch size={14} className="text-blue-400" />
+            Operating Cluster
+          </div>
+          <ClusterBadge cluster={current.kmeans_cluster} />
+        </div>
+        <div className="bg-slate-800/35 border border-slate-700/50 rounded-xl p-4">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
+            <ShieldAlert size={14} className="text-amber-400" />
+            Current Risk
+          </div>
+          <div className="text-2xl font-bold text-slate-100">{currentProb}%</div>
+        </div>
+        <div className="bg-slate-800/35 border border-slate-700/50 rounded-xl p-4">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
+            Model Decision
+          </div>
+          <div className={`text-lg font-bold ${current.ensemble_label === 1 ? 'text-red-400' : 'text-emerald-400'}`}>
+            {current.ensemble_label === 1 ? 'Fault' : 'Stable'}
+          </div>
         </div>
       </div>
 

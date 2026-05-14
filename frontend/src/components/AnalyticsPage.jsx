@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   BarChart3,
   BrainCircuit,
+  CircleDot,
   GitBranch,
   Gauge,
   Loader2,
@@ -32,6 +33,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { clusterStyle } from '../clusterStyles'
+import ClusterBadge from './ClusterBadge'
 import { API_URL } from '../config'
 
 const RAW_FEATS = ['tau1', 'tau2', 'tau3', 'tau4', 'p1', 'p2', 'p3', 'p4', 'g1', 'g2', 'g3', 'g4']
@@ -41,6 +44,8 @@ const TIER_COLORS = {
   Amber: '#ffa502',
   Red: '#ff4757',
 }
+
+const CLUSTER_ORDER = ['normal operation', 'pre-fault stress', 'active fault']
 
 const FEATURE_GROUPS = [
   { key: 'tau', label: 'Reaction Time', color: '#3d8ef8' },
@@ -121,6 +126,7 @@ export default function AnalyticsPage() {
     if (!feed.length || !stats) return null
 
     const tierCounts = { Green: 0, Amber: 0, Red: 0 }
+    const clusterCounts = Object.fromEntries(CLUSTER_ORDER.map(cluster => [cluster, 0]))
     const featureStress = Object.fromEntries(RAW_FEATS.map(f => [f, { total: 0, max: 0 }]))
     const groupStress = Object.fromEntries(FEATURE_GROUPS.map(g => [g.key, { total: 0, count: 0 }]))
     let faultCount = 0
@@ -142,6 +148,7 @@ export default function AnalyticsPage() {
       const truth = row._true_label === 1 ? 1 : 0
 
       tierCounts[row.risk_tier] = (tierCounts[row.risk_tier] || 0) + 1
+      clusterCounts[row.kmeans_cluster] = (clusterCounts[row.kmeans_cluster] || 0) + 1
       faultCount += label
       trueFaults += truth
       correct += label === truth ? 1 : 0
@@ -179,6 +186,14 @@ export default function AnalyticsPage() {
     const sampleEvery = Math.max(1, Math.ceil(trend.length / 90))
     const sampledTrend = trend.filter((_, index) => index % sampleEvery === 0 || index === trend.length - 1)
     const tierData = Object.entries(tierCounts).map(([name, value]) => ({ name, value }))
+    const clusterData = Object.entries(clusterCounts)
+      .filter(([, value]) => value > 0)
+      .map(([name, value]) => ({
+        name,
+        value,
+        pct: value / feed.length,
+        color: clusterStyle(name).color,
+      }))
     const stressData = Object.entries(featureStress)
       .map(([feature, value]) => ({
         feature,
@@ -208,6 +223,7 @@ export default function AnalyticsPage() {
       anomalyMean: anomalyTotal / feed.length,
       sampledTrend,
       tierData,
+      clusterData,
       stressData,
       radarData,
     }
@@ -277,6 +293,44 @@ export default function AnalyticsPage() {
                 <Legend wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <Panel title="Operating Cluster Mix" icon={CircleDot} className="xl:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {analytics.clusterData.map(cluster => (
+              <div key={cluster.name} className="bg-slate-900/35 border border-slate-700/50 rounded-lg p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <ClusterBadge cluster={cluster.name} />
+                  <span className="text-xl font-bold" style={{ color: cluster.color }}>
+                    {Math.round(cluster.pct * 100)}%
+                  </span>
+                </div>
+                <div className="mt-3 h-2 rounded-full bg-slate-700/70 overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${cluster.pct * 100}%`, backgroundColor: cluster.color }} />
+                </div>
+                <div className="mt-2 text-xs text-slate-400">{cluster.value.toLocaleString()} replay rows</div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="Cluster Meaning" icon={GitBranch}>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <ClusterBadge cluster="normal operation" />
+              <span className="text-xs text-slate-400">low-stress behavior</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <ClusterBadge cluster="pre-fault stress" />
+              <span className="text-xs text-slate-400">warning pattern</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <ClusterBadge cluster="active fault" />
+              <span className="text-xs text-slate-400">fault-like behavior</span>
+            </div>
           </div>
         </Panel>
       </div>
